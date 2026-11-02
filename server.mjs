@@ -11,14 +11,15 @@ const root=path.dirname(fileURLToPath(import.meta.url));
 function json(res,status,data){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(data));}
 async function body(req){let value='';for await(const chunk of req){value+=chunk;if(Buffer.byteLength(value)>180000)throw Error('요청이 너무 큽니다.');}return JSON.parse(value);}
 function equal(a,b){const x=Buffer.from(a),y=Buffer.from(b);return x.length===y.length&&timingSafeEqual(x,y);}
-export function createApp({services,store,env=process.env}){
+export function createApp({services,store,env=process.env,androidConfigPath=path.join(root,'config/firebase-android.json')}){
   return http.createServer(async(req,res)=>{
     try{
       const url=new URL(req.url,'http://localhost');
       if(req.method==='GET'&&url.pathname==='/healthz')return json(res,200,{status:'ok'});
       if(req.method==='GET'&&url.pathname==='/api/push/config'){
-        let config;try{config=JSON.parse(env.FIREBASE_ANDROID_CONFIG_JSON||'null');}catch{}
+        let config;try{config=JSON.parse(env.FIREBASE_ANDROID_CONFIG_JSON||await readFile(androidConfigPath,'utf8'));}catch{}
         if(!services.push?.configured||!config?.appId||!config?.apiKey||!config?.projectId||!config?.senderId)return json(res,503,{error:'Firebase 앱 연결 설정이 아직 준비되지 않았습니다.'});
+        if(services.push.projectId&&config.projectId!==services.push.projectId)return json(res,503,{error:'Firebase 앱과 서버의 프로젝트가 일치하지 않습니다.'});
         return json(res,200,{appId:config.appId,apiKey:config.apiKey,projectId:config.projectId,senderId:config.senderId});
       }
 

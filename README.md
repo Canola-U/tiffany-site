@@ -46,7 +46,7 @@ npm start
 | `LLM_API_KEY` | 선택: OpenAI 요약용 비밀값. 없으면 원문 발췌 |
 | `LLM_MODEL` | 선택: 기본값 gpt-4o-mini |
 | `WRITE_TOKEN` | 공개 배포 시 요약 작성 보호용 비밀값 |
-| `FIREBASE_ANDROID_CONFIG_JSON` | 선택: 공개 Android 앱 연결 설정(JSON) |
+| `FIREBASE_ANDROID_CONFIG_JSON` | 선택: 공개 Android 앱 연결 설정(JSON). 미지정 시 config/firebase-android.json 사용 |
 | `FIREBASE_SERVICE_ACCOUNT_JSON` | 선택: Firebase 서버 서비스 계정 비밀키 JSON. 로컬 서명에 사용하므로 호스팅의 원본 비밀 환경 변수에만 등록 |
 | `PORT` | 기본 3000 |
 | `DATA_DIR` | 기본 .data. 영구 저장용 볼륨에 연결 가능 |

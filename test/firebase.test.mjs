@@ -25,7 +25,7 @@ test('FCM uses signed OAuth JWT, caches credentials, and sends visible high-prio
 });
 test('push registration protects each device secret and supports unsubscribe',async()=>{
  const folder=await mkdtemp(path.join(os.tmpdir(),'tiffany-push-'));
- let calls=0;const store=await createStore(folder);const app=createApp({store,env:{},services:{push:{configured:true,send:async()=>{calls++;}},status:async()=>({live:{state:'offline'},youtube:{state:'unavailable'}})}});
+ let calls=0;const store=await createStore(folder);const app=createApp({store,env:{},androidConfigPath:path.join(folder,'missing.json'),services:{push:{configured:true,send:async()=>{calls++;}},status:async()=>({live:{state:'offline'},youtube:{state:'unavailable'}})}});
  app.listen(0,'127.0.0.1');await once(app,'listening');const base=`http://127.0.0.1:${app.address().port}`;
  const post=(endpoint,body)=>fetch(base+endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
  try{
@@ -47,5 +47,25 @@ test('Discord failure does not block FCM and successful device delivery is not r
   const services={status:async()=>state,discordConfigured:true,sendDiscord:async()=>{if(++discord===1)throw Error('temporary');},push:{configured:true,send:async()=>{push++;}}};
   const tick=createMonitor(services,store);await tick();state={live:{state:'live',id:'42',title:'방송',url:'https://play.sooplive.co.kr/w96idqb/42'},youtube:{state:'unavailable'}};
   await assert.rejects(tick);assert.equal(push,1);await tick();assert.equal(push,1);assert.equal(discord,2);
+ }finally{await rm(folder,{recursive:true,force:true});}
+});
+test('Android config loads public file, supports an environment override and rejects project mismatch',async()=>{
+ const folder=await mkdtemp(path.join(os.tmpdir(),'tiffany-android-config-'));
+ const {writeFile}=await import('node:fs/promises');
+ const fallback=path.join(folder,'android.json');
+ const config={appId:'1:123:android:test',apiKey:'client-api-key',projectId:'test-project',senderId:'123',private_key:'must-not-be-returned'};
+ await writeFile(fallback,JSON.stringify(config));
+ async function request(env,projectId='test-project',configured=true){
+  const app=createApp({store:{},env,androidConfigPath:fallback,services:{push:{configured,projectId}}});
+  app.listen(0,'127.0.0.1');await once(app,'listening');
+  try{const response=await fetch(`http://127.0.0.1:${app.address().port}/api/push/config`);return {status:response.status,body:await response.json()};}
+  finally{app.closeAllConnections();await new Promise(resolve=>app.close(resolve));}
+ }
+ try{
+  const file=await request({});assert.equal(file.status,200);assert.equal(file.body.appId,config.appId);assert.equal(file.body.private_key,undefined);assert.equal(Object.keys(file.body).length,4);
+  const override=await request({FIREBASE_ANDROID_CONFIG_JSON:JSON.stringify({...config,appId:'override'})});assert.equal(override.body.appId,'override');
+  assert.equal((await request({},'another-project')).status,503);
+  assert.equal((await request({},'test-project',false)).status,503);
+  assert.equal((await request({FIREBASE_ANDROID_CONFIG_JSON:'malformed'})).status,503);
  }finally{await rm(folder,{recursive:true,force:true});}
 });

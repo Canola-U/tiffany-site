@@ -14,7 +14,7 @@ Android 8.0(API 26) 이상에서 사이트를 보여주고, 서버의 새 방송
 python3 android/tools/firebase-config.py /path/to/google-services.json
 ```
 
-4. Render 대시보드에서 **tiffany-room 서비스의 환경 변수**에 출력 JSON 전체를 `FIREBASE_ANDROID_CONFIG_JSON` 값으로 넣습니다. 이 설정에는 `appId`, `apiKey`, `projectId`, `senderId`만 포함합니다. 앱용 API 키는 Firebase 보안 안내에 맞춰 용도를 제한하고, 같은 프로젝트의 올바른 Android 앱을 등록하세요.
+4. 현재 연결한 `tiffany-alaam` 프로젝트의 앱 공개 설정은 `config/firebase-android.json`에 반영되어 있습니다. 이 프로젝트를 사용하는 경우 별도 공개 설정 입력은 필요하지 않습니다. 다른 프로젝트로 바꾸는 경우에만 Render의 `FIREBASE_ANDROID_CONFIG_JSON`으로 위 도구의 출력 JSON을 덮어쓸 수 있습니다. 설정에는 `appId`, `apiKey`, `projectId`, `senderId`만 포함하며, 서버는 앱과 서버 서비스 계정의 프로젝트 ID가 일치하는지도 확인합니다. Firebase 보안 안내에 맞춰 앱 API 키의 사용 API·앱 제한을 구성하세요.
 5. Firebase 프로젝트 설정의 서비스 계정에서 서버용 비공개 키를 생성합니다. Google의 Firebase Cloud Messaging API 사용 권한이 필요합니다. **이 키 JSON은 비밀값입니다. 채팅·GitHub에 업로드하지 마세요.** Render의 비밀 환경 변수 `FIREBASE_SERVICE_ACCOUNT_JSON`에 파일 내용 전체를 입력합니다. 서버는 이 키로 로컬에서 JWT를 서명하므로 프록시 대체용 가짜 값으로 설정하면 안 됩니다.
 6. Render가 재배포된 후 `/api/status`의 `pushConfigured`와 `/api/push/config` 응답을 확인합니다. `pushConfigured`는 키 형식 존재만 뜻하며 Google 발송 권한까지 보장하지 않습니다. 실제 발송 테스트가 필요합니다.
 
