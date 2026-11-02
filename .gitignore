@@ -2,3 +2,10 @@
 .data/
 node_modules/
 *.log
+android/.gradle/
+android/.signing/
+android/build-cli/
+android/app/build/
+android/local.properties
+android/build/
+android/app/google-services.json
