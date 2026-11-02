@@ -1,0 +1,12 @@
+{
+  "name": "tiffany-room",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env --use-env-proxy server.mjs",
+    "dev": "node --env-file-if-exists=.env --use-env-proxy --watch server.mjs",
+    "test": "node --test test/*.test.mjs"
+  }
+}
