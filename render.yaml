@@ -1,0 +1,28 @@
+# This blueprint provisions paid always-on compute and a persistent disk.
+# Review the current Render price before creating the service.
+services:
+  - type: web
+    name: tiffany-room
+    runtime: node
+    plan: starter
+    numInstances: 1
+    buildCommand: npm ci --ignore-scripts --no-audit --no-fund && npm test
+    startCommand: npm start
+    healthCheckPath: /healthz
+    disk:
+      name: tiffany-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: 24.19.0
+      - key: NODE_ENV
+        value: production
+      - key: DATA_DIR
+        value: /var/data/tiffany-room
+      - key: WRITE_TOKEN
+        generateValue: true
+      - key: DISCORD_CHANNEL_ID
+        value: "1566736820396359711"
+      - key: DISCORD_BOT_TOKEN
+        sync: false

@@ -14,6 +14,7 @@ export function createApp({services,store,env=process.env}){
   return http.createServer(async(req,res)=>{
     try{
       const url=new URL(req.url,'http://localhost');
+      if(req.method==='GET'&&url.pathname==='/healthz')return json(res,200,{status:'ok'});
       if(req.method==='GET'&&url.pathname==='/api/status')return json(res,200,{...await services.status(),discordConfigured:services.discordConfigured,aiConfigured:services.aiConfigured,writeProtected:Boolean(env.WRITE_TOKEN)});
       if(req.method==='GET'&&url.pathname==='/api/summaries')return json(res,200,store.list());
       if(req.method==='POST'&&url.pathname==='/api/summaries'){
