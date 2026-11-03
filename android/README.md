@@ -56,3 +56,9 @@ APK 공개 경로는 `android/releases/tiffany-room-android.apk`, SHA-256은 같
 ## 검증 범위
 
 알림 감지 알고리즘의 JVM 검사 10개, 서버의 Firebase JWT 서명·토큰 캐시·메시지 형식·기기 인증·등록 해제·채널별 재시도 및 기존 웹 통합 테스트를 실행합니다. APK 빌드·서명 검증과 실제 휴대폰의 설치·화면·권한·백그라운드 수신 검증은 구별해서 보고해야 합니다. Firebase 프로젝트가 연결되기 전의 모의 테스트 통과는 실제 푸시 성공을 의미하지 않습니다.
+
+## Render가 Firebase JSON 오류로 시작되지 않았던 경우
+
+기존 버전은 잘못된 `FIREBASE_SERVICE_ACCOUNT_JSON`을 읽으면 서버 시작 자체가 종료됐습니다. 수정 버전은 해당 푸시 연결만 비활성화하고 사이트·디스코드·요약 기능은 계속 실행합니다. `/api/status`의 `pushError`에는 비밀값을 포함하지 않는 안내만 표시합니다.
+
+Render의 Environment에서 `FIREBASE_SERVICE_ACCOUNT_JSON` 값을 지우고 **서버용 비공개 키 JSON 파일 내용 전체**를 다시 붙여넣으세요. 파일 이름·경로, 앱용 `google-services.json`, Markdown 코드 블록이나 JSON 전체를 감싼 추가 따옴표를 넣지 마세요. 정상 서비스 계정 JSON에는 `type`이 `service_account`로 표시됩니다. 마지막 중괄호까지 복사한 뒤 저장·재배포합니다. 실제 비공개 키를 채팅·로그·GitHub에 공개하지 마세요. `.env not found. Continuing without it.`는 Render의 환경 변수 사용 시 정상 안내로, 위 JSON 오류의 원인이 아닙니다.

@@ -18,12 +18,12 @@ export function createApp({services,store,env=process.env,androidConfigPath=path
       if(req.method==='GET'&&url.pathname==='/healthz')return json(res,200,{status:'ok'});
       if(req.method==='GET'&&url.pathname==='/api/push/config'){
         let config;try{config=JSON.parse(env.FIREBASE_ANDROID_CONFIG_JSON||await readFile(androidConfigPath,'utf8'));}catch{}
-        if(!services.push?.configured||!config?.appId||!config?.apiKey||!config?.projectId||!config?.senderId)return json(res,503,{error:'Firebase 앱 연결 설정이 아직 준비되지 않았습니다.'});
+        if(!services.push?.configured||!config?.appId||!config?.apiKey||!config?.projectId||!config?.senderId)return json(res,503,{error:services.push?.error||'Firebase 앱 연결 설정이 아직 준비되지 않았습니다.'});
         if(services.push.projectId&&config.projectId!==services.push.projectId)return json(res,503,{error:'Firebase 앱과 서버의 프로젝트가 일치하지 않습니다.'});
         return json(res,200,{appId:config.appId,apiKey:config.apiKey,projectId:config.projectId,senderId:config.senderId});
       }
 
-      if(req.method==='GET'&&url.pathname==='/api/status')return json(res,200,{...await services.status(),pushConfigured:Boolean(services.push?.configured),discordConfigured:services.discordConfigured,aiConfigured:services.aiConfigured,writeProtected:Boolean(env.WRITE_TOKEN)});
+      if(req.method==='GET'&&url.pathname==='/api/status')return json(res,200,{...await services.status(),pushConfigured:Boolean(services.push?.configured),pushError:services.push?.error||null,discordConfigured:services.discordConfigured,aiConfigured:services.aiConfigured,writeProtected:Boolean(env.WRITE_TOKEN)});
       if(req.method==='GET'&&url.pathname==='/api/summaries')return json(res,200,store.list());
       if(req.method==='POST'&&(url.pathname==='/api/push/devices'||url.pathname==='/api/push/unsubscribe'||url.pathname==='/api/push/test')){
         if(!services.push?.configured)return json(res,503,{error:'Firebase 서버 연결이 아직 설정되지 않았습니다.'});
@@ -109,7 +109,7 @@ export function createMonitor(services,store){
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
   const store=await createStore(process.env.DATA_DIR||path.join(root,'.data'));
-  const services=createServices();services.push=createFirebase();const app=createApp({services,store});
+  const services=createServices();services.push=createFirebase();if(services.push.error)console.warn('Firebase push disabled:',services.push.error);const app=createApp({services,store});
   app.listen(Number(process.env.PORT||3000),'0.0.0.0',()=>console.log(`Tiffany Room listening on ${process.env.PORT||3000}`));
   const tick=createMonitor(services,store);
   const poll=()=>tick().catch(e=>console.error('Monitor:',e.message));

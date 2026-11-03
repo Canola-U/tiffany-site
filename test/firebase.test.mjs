@@ -10,7 +10,7 @@ import {createStore} from '../lib/store.mjs';
 import {createApp,createMonitor} from '../server.mjs';
 test('FCM uses signed OAuth JWT, caches credentials, and sends visible high-priority data',async()=>{
  const {privateKey,publicKey}=generateKeyPairSync('rsa',{modulusLength:2048});let oauth=0,sent=0;
- const service=createFirebase({FIREBASE_SERVICE_ACCOUNT_JSON:JSON.stringify({project_id:'test-project',client_email:'test@test-project.iam.gserviceaccount.com',private_key:privateKey.export({type:'pkcs8',format:'pem'})})},async(url,options)=>{
+ const service=createFirebase({FIREBASE_SERVICE_ACCOUNT_JSON:JSON.stringify({type:'service_account',project_id:'test-project',client_email:'test@test-project.iam.gserviceaccount.com',private_key:privateKey.export({type:'pkcs8',format:'pem'})})},async(url,options)=>{
   if(url.includes('oauth2.googleapis.com')){
    oauth++;const token=options.body.get('assertion');const [header,payload,signature]=token.split('.');
    assert.ok(createVerify('RSA-SHA256').update(`${header}.${payload}`).verify(publicKey,Buffer.from(signature,'base64url')));
@@ -68,4 +68,31 @@ test('Android config loads public file, supports an environment override and rej
   assert.equal((await request({},'test-project',false)).status,503);
   assert.equal((await request({FIREBASE_ANDROID_CONFIG_JSON:'malformed'})).status,503);
  }finally{await rm(folder,{recursive:true,force:true});}
+});
+test('malformed Firebase settings disable push without throwing or echoing secret input',async()=>{
+ let requests=0;
+ const inputs=['{broken-user-secret-marker','server-key.json','"double-encoded-input"','null','[]',JSON.stringify({project_info:{project_id:'client-config'}}),JSON.stringify({type:'service_account',project_id:'test-project',client_email:'test@example.com',private_key:'private-secret-marker'})];
+ for(const raw of inputs){
+  const service=createFirebase({FIREBASE_SERVICE_ACCOUNT_JSON:raw},async()=>{requests++;throw Error('must not call network');});
+  assert.equal(service.configured,false);assert.equal(service.projectId,undefined);assert.ok(service.error);assert.ok(!service.error.includes('secret-marker'));
+  await assert.rejects(service.send('token',{title:'test'}));
+ }
+ assert.equal(requests,0);
+});
+test('valid service account JSON may contain a UTF-8 BOM and surrounding whitespace',()=>{
+ const {privateKey}=generateKeyPairSync('rsa',{modulusLength:2048});
+ const raw=JSON.stringify({type:'service_account',project_id:'test-project',client_email:'test@test-project.iam.gserviceaccount.com',private_key:privateKey.export({type:'pkcs8',format:'pem'})});
+ const service=createFirebase({FIREBASE_SERVICE_ACCOUNT_JSON:'\uFEFF\n '+raw+'\n '});
+ assert.equal(service.configured,true);assert.equal(service.error,null);
+});
+test('site health, HTML and summaries remain available when Firebase JSON is invalid',async()=>{
+ const services={push:createFirebase({FIREBASE_SERVICE_ACCOUNT_JSON:'{invalid-private-secret-marker'}),status:async()=>({live:{state:'offline'},youtube:{state:'unavailable'}})};
+ const app=createApp({services,store:{list:()=>[]},env:{}});app.listen(0,'127.0.0.1');await once(app,'listening');
+ const base=`http://127.0.0.1:${app.address().port}`;
+ try{
+  assert.deepEqual(await(await fetch(base+'/healthz')).json(),{status:'ok'});
+  assert.equal((await fetch(base)).status,200);assert.deepEqual(await(await fetch(base+'/api/summaries')).json(),[]);
+  const status=await(await fetch(base+'/api/status')).json();assert.equal(status.pushConfigured,false);assert.ok(status.pushError);assert.ok(!JSON.stringify(status).includes('private-secret-marker'));
+  const config=await fetch(base+'/api/push/config');assert.equal(config.status,503);assert.ok(!(await config.text()).includes('private-secret-marker'));
+ }finally{app.closeAllConnections();await new Promise(resolve=>app.close(resolve));}
 });
